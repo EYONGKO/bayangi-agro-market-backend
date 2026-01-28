@@ -19,9 +19,16 @@ const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(
   cors({
     origin: corsOrigin === '*' ? true : corsOrigin.split(',').map((s) => s.trim()),
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   })
 );
+
+// Handle preflight requests explicitly
+app.options('*', cors());
 
 app.use(express.json({ limit: '50mb' }));
 
