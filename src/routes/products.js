@@ -42,6 +42,134 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// User: create product (base64 image support) - v2.0.1
+router.post('/user', async (req, res, next) => {
+  try {
+    const { name, description, price, category, image, community, stock } = req.body;
+    
+    // Development mode: allow without authentication
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Development mode: allowing product creation without authentication');
+      
+      const product = new Product({
+        name,
+        description,
+        price,
+        category,
+        image, // Store base64 directly
+        community: community || 'Default',
+        stock: stock || 0,
+        vendor: 'Development User',
+        rating: 0,
+        reviews: 0,
+        likes: 0
+      });
+      
+      await product.save();
+      console.log('Product created successfully:', product.name);
+      res.status(201).json(product);
+      return;
+    }
+    
+    // Production: require authentication
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Verify token (simplified for development)
+    try {
+      const { verifyJwt } = await import('../utils/jwt.js');
+      const decoded = verifyJwt(token);
+      req.user = decoded;
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    const product = new Product({
+      name,
+      description,
+      price,
+      category,
+      image, // Store base64 directly
+      community: community || 'Default',
+      stock: stock || 0,
+      vendor: req.user.email || 'Unknown',
+      rating: 0,
+      reviews: 0,
+      likes: 0
+    });
+    
+    await product.save();
+    res.status(201).json(product);
+  } catch (e) {
+    console.error('Error creating product:', e);
+    next(e);
+  }
+});
+
+// User: update product (base64 image support)
+router.put('/user/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Development mode: allow without authentication
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Development mode: allowing product update without authentication');
+      
+      const updated = await Product.findByIdAndUpdate(
+        id, 
+        updateData, 
+        { new: true, runValidators: true }
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      
+      console.log('Product updated successfully:', updated.name);
+      res.json(updated);
+      return;
+    }
+    
+    // Production: require authentication
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Verify token (simplified for development)
+    try {
+      const { verifyJwt } = await import('../utils/jwt.js');
+      const decoded = verifyJwt(token);
+      req.user = decoded;
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    const updated = await Product.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!updated) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    console.log('Product updated successfully:', updated.name);
+    res.json(updated);
+  } catch (e) {
+    console.error('Error updating product:', e);
+    next(e);
+  }
+});
+
 // Public: get product
 router.get('/:id', async (req, res, next) => {
   try {
@@ -320,134 +448,6 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    next(e);
-  }
-});
-
-// User: create product (base64 image support) - v2.0.1
-router.post('/user', async (req, res, next) => {
-  try {
-    const { name, description, price, category, image, community, stock } = req.body;
-    
-    // Development mode: allow without authentication
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('Development mode: allowing product creation without authentication');
-      
-      const product = new Product({
-        name,
-        description,
-        price,
-        category,
-        image, // Store base64 directly
-        community: community || 'Default',
-        stock: stock || 0,
-        vendor: 'Development User',
-        rating: 0,
-        reviews: 0,
-        likes: 0
-      });
-      
-      await product.save();
-      console.log('Product created successfully:', product.name);
-      res.status(201).json(product);
-      return;
-    }
-    
-    // Production: require authentication
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-    
-    if (!token) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    // Verify token (simplified for development)
-    try {
-      const { verifyJwt } = await import('../utils/jwt.js');
-      const decoded = verifyJwt(token);
-      req.user = decoded;
-    } catch (e) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    
-    const product = new Product({
-      name,
-      description,
-      price,
-      category,
-      image, // Store base64 directly
-      community: community || 'Default',
-      stock: stock || 0,
-      vendor: req.user.email || 'Unknown',
-      rating: 0,
-      reviews: 0,
-      likes: 0
-    });
-    
-    await product.save();
-    res.status(201).json(product);
-  } catch (e) {
-    console.error('Error creating product:', e);
-    next(e);
-  }
-});
-
-// User: update product (base64 image support)
-router.put('/user/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-    
-    // Development mode: allow without authentication
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('Development mode: allowing product update without authentication');
-      
-      const updated = await Product.findByIdAndUpdate(
-        id, 
-        updateData, 
-        { new: true, runValidators: true }
-      );
-      
-      if (!updated) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      
-      console.log('Product updated successfully:', updated.name);
-      res.json(updated);
-      return;
-    }
-    
-    // Production: require authentication
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-    
-    if (!token) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    
-    // Verify token (simplified for development)
-    try {
-      const { verifyJwt } = await import('../utils/jwt.js');
-      const decoded = verifyJwt(token);
-      req.user = decoded;
-    } catch (e) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    
-    const updated = await Product.findByIdAndUpdate(
-      id, 
-      updateData, 
-      { new: true, runValidators: true }
-    );
-    
-    if (!updated) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    
-    console.log('Product updated successfully:', updated.name);
-    res.json(updated);
-  } catch (e) {
-    console.error('Error updating product:', e);
     next(e);
   }
 });
