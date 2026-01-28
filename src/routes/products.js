@@ -48,7 +48,7 @@ router.post('/user', async (req, res, next) => {
     const { name, description, price, category, image, community, stock } = req.body;
     
     // Development mode: allow without authentication
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || process.env.RAILWAY_ENVIRONMENT === 'production') {
       console.warn('Development mode: allowing product creation without authentication');
       
       const product = new Product({
@@ -117,7 +117,7 @@ router.put('/user/:id', async (req, res, next) => {
     const updateData = req.body;
     
     // Development mode: allow without authentication
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || process.env.RAILWAY_ENVIRONMENT === 'production') {
       console.warn('Development mode: allowing product update without authentication');
       
       const updated = await Product.findByIdAndUpdate(
